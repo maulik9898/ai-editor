@@ -1,0 +1,136 @@
+/* Field inspector styles - Updated for JavaScript tooltips */
+.field-inspector-enhanced [data-lf-field-name] {
+    position: relative;
+    transition: all 0.2s ease-out;
+}
+
+/* Active field highlighting (only for the specific hovered field) */
+.field-inspector-enhanced [data-lf-field-name].field-inspector-active {
+    outline: 2px solid hsl(200 85% 60%);
+    outline-offset: 2px;
+    border-radius: 6px;
+    background-color: hsl(200 85% 60% / 0.05);
+    box-shadow: 0 0 0 4px hsl(200 85% 60% / 0.1);
+    transform: scale(1.02);
+    z-index: 999;
+}
+
+/* JavaScript-created tooltip styles */
+.field-inspector-tooltip {
+    position: absolute;
+    background: hsl(200 85% 60% / 1); /* Semi-transparent background */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+
+    /* Add backdrop blur for better visibility */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+
+    /* Subtle shadow for depth */
+    box-shadow:
+        0 4px 12px rgb(0 0 0 / 0.15),
+        0 0 0 1px hsl(255 255 255 / 0.1);
+
+    /* Remove any potential text decorations or underlines */
+    text-decoration: none;
+    text-underline-offset: none;
+    text-decoration-line: none;
+
+    /* Reset any inherited styles that might cause lines */
+    outline: none;
+    box-sizing: border-box;
+
+    /* Animation setup */
+    opacity: 0;
+    transform: translateY(-8px) scale(0.8);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Dynamic width based on content */
+    width: max-content;
+    max-width: min(250px, 80vw); /* Responsive max width */
+    min-width: 60px; /* Minimum width for very short text */
+
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* Force clean rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.field-inspector-tooltip-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Dark mode support for JavaScript tooltips */
+.dark .field-inspector-tooltip {
+    background: hsl(
+        var(--background) / 0.95
+    ); /* Semi-transparent dark background */
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(200 85% 60% / 0.5);
+    box-shadow:
+        0 4px 12px rgb(0 0 0 / 0.3),
+        0 0 0 1px hsl(200 85% 60% / 0.2);
+}
+
+.dark .field-inspector-tooltip-arrow {
+    border-top-color: hsl(var(--background));
+}
+
+/* Special handling for input wrappers vs direct inputs */
+.field-inspector-enhanced
+    .mantine-Input-wrapper[data-lf-field-name].field-inspector-active {
+    background-color: hsl(200 85% 60% / 0.03);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.field-inspector-enhanced
+    .mantine-Input-wrapper[data-lf-field-name].field-inspector-active
+    input,
+.field-inspector-enhanced
+    .mantine-Input-wrapper[data-lf-field-name].field-inspector-active
+    textarea,
+.field-inspector-enhanced
+    .mantine-Input-wrapper[data-lf-field-name].field-inspector-active
+    select {
+    border-color: hsl(200 85% 60%) !important;
+}
+
+/* Ensure tooltips don't get cut off at container edges */
+.field-inspector-enhanced {
+    overflow: visible !important;
+    position: relative;
+}
+
+/* Add a subtle pulse effect to the active field */
+@keyframes pulseField {
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px hsl(200 85% 60% / 0.1);
+    }
+    50% {
+        box-shadow: 0 0 0 6px hsl(200 85% 60% / 0.15);
+    }
+}
+
+.field-inspector-enhanced [data-lf-field-name].field-inspector-active {
+    animation: pulseField 2s ease-in-out infinite;
+}
+
+/* Remove hover-based CSS tooltips since we're using JavaScript */
+.field-inspector-enhanced [data-lf-field-name]:hover::after,
+.field-inspector-enhanced [data-lf-field-name]:hover::before {
+    display: none;
+}
