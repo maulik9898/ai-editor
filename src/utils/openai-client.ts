@@ -32,6 +32,7 @@ export async function getOpenAIClient(
       const copilotToken = await getCopilotToken();
 
       openaiClient = new OpenAI({
+        
         defaultHeaders: {
           Authorization: `Bearer ${copilotToken}`,
           "Editor-Version": "ZED/1.1.1",

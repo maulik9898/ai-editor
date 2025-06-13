@@ -37,7 +37,8 @@ export const POST = async (req: NextRequest) => {
 
     // Stream the response
     const stream = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL!,
+      model: process.env.JSON_FIX_MODEL!,
+
       messages: [
         {
           role: "system",

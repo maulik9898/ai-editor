@@ -24,7 +24,6 @@ export const metadata: Metadata = {
 // CopilotKit configuration
 const runtimeUrl =
   process.env.NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL || "/api/copilotkit";
-const publicApiKey = process.env.NEXT_PUBLIC_COPILOT_API_KEY;
 
 export default function RootLayout({
   children,
@@ -45,11 +44,11 @@ export default function RootLayout({
           <KnowledgeBaseProvider>
             <CopilotKit
               forwardedParameters={{
-                temperature: 0,
+                temperature: parseFloat(
+                  process.env.NEXT_PUBLIC_TEMPERATURE || "0",
+                ),
               }}
-              showDevConsole={true}
               runtimeUrl={runtimeUrl}
-              publicApiKey={publicApiKey}
             >
               {children}
             </CopilotKit>

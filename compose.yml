@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  ai-editor:
+    image: ghcr.io/maulik9898/ai-editor:0.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      # Add your environment variables here
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - GITHUB_OAUTH_TOKEN=${GITHUB_OAUTH_TOKEN}
+      # - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      # - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      # - LANGFUSE_HOST=${LANGFUSE_HOST}
+      # - USE_COPILOT_API=${USE_COPILOT_API}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
