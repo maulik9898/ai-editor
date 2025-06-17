@@ -19,56 +19,39 @@ import {
 } from "./patch-utils";
 import { EditorState } from "@/types/editor";
 import { JsonPatchOperation } from "json-joy/esm/json-patch";
-import { useEditorContext } from "@/contexts/editor-context";
-
-const DebugInformation = ({ rawToolCall }: { rawToolCall: any }) => (
-  <AccordionItem value="debug-info">
-    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-      <div className="flex items-center gap-2">
-        <Code className="h-4 w-4" />
-        <span>Tool Call</span>
-      </div>
-    </AccordionTrigger>
-    <AccordionContent className="px-4 pb-4">
-      <div className="space-y-4">
-        <div>
-          <h5 className="text-sm font-medium mb-2 text-muted-foreground">
-            Tool Call JSON
-          </h5>
-          <pre className="text-xs bg-muted border rounded p-3 overflow-auto max-h-64 font-mono">
-            {JSON.stringify(rawToolCall, null, 2)}
-          </pre>
-        </div>
-      </div>
-    </AccordionContent>
-  </AccordionItem>
-);
+import { useEditorStore } from "@/stores/editor-store";
+import { DebugInformationTabs } from "../common/DebugInformationTabs";
+import { useDebugStore } from "@/stores/debug-store";
+import { JsonPatchInput, JsonPatchOutput } from "@/tools/json-patch-tool";
 
 type OperationStatus = "pending" | "applied" | "rejected";
 
 interface JSONPatchPreviewProps {
-  file_path: string;
   file_content: string;
-  description: string;
-  operations: JsonPatchOperation[];
-  status: "inProgress" | "executing" | "complete";
+  result: JsonPatchOutput;
+  args: JsonPatchInput;
 }
 
 export function JSONPatchPreview({
-  file_path,
   file_content,
-  description,
-  operations,
-  status,
+  result,
+  args,
 }: JSONPatchPreviewProps) {
   const [operationStates, setOperationStates] = useState<
     Map<number, OperationStatus>
   >(new Map());
-  const { actions: editorActions, state } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
+  const updateFileContent = useEditorStore((state) => state.updateFileContent);
   const [error, setError] = useState<string | null>(null);
+
+  const isDebugEnabled = useDebugStore((state) => state.isDebugEnabled);
 
   // Store immutable snapshot of file content using ref
   const immutableFileContentRef = useRef<string>("");
+
+  const operations = result.operations;
+  const file_path = args.file_path;
+  const description = args.description;
 
   // Initialize ref with file content when we have valid content
   useEffect(() => {
@@ -79,10 +62,10 @@ export function JSONPatchPreview({
 
   // Initialize when component mounts or operations change
   useEffect(() => {
-    if (status === "complete" && operations?.length > 0) {
+    if (operations?.length > 0) {
       validateAndRespond();
     }
-  }, [operations, status]);
+  }, [operations]);
 
   const validateAndRespond = () => {
     try {
@@ -120,10 +103,10 @@ export function JSONPatchPreview({
     // Apply this individual operation to the immutable file content
     const operation = operations[index];
     try {
-      const content = state.files[file_path]?.content;
+      const content = files[file_path]?.content;
       const preview = generatePatchPreview(content, [operation]);
       if (preview.isValid) {
-        editorActions.updateFileContent(file_path, preview.modifiedContent);
+        updateFileContent(file_path, preview.modifiedContent);
       }
     } catch (err) {
       console.error("Failed to apply operation:", err);
@@ -161,11 +144,11 @@ export function JSONPatchPreview({
     try {
       // Apply all pending operations at once
       const opsToApply = pendingOperations.map(({ operation }) => operation);
-      const content = state.files[file_path]?.content;
+      const content = files[file_path]?.content;
       const preview = generatePatchPreview(content, opsToApply);
 
       if (preview.isValid) {
-        editorActions.updateFileContent(file_path, preview.modifiedContent);
+        updateFileContent(file_path, preview.modifiedContent);
 
         // Mark all as applied
         pendingOperations.forEach(({ index }) => {
@@ -191,50 +174,49 @@ export function JSONPatchPreview({
     setOperationStates(newStates);
   };
 
-  // Create the raw tool call JSON for debugging
-  const rawToolCall = {
-    file_path,
-    description,
-    operations,
-  };
-
-  // Show loading state
-  if (status === "inProgress") {
-    return (
-      <div className="flex items-center gap-2 p-4 border rounded-lg bg-muted/30">
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-        <span className="text-sm">Preparing JSON patch operations...</span>
-      </div>
-    );
-  }
-
   // Handle error state
   if (error) {
     return (
-      <div className="max-w-4xl border rounded-lg bg-background">
-        <div className="border-b p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className="h-5 w-5 text-destructive" />
-            <h3 className="font-medium text-destructive">JSON Patch Error</h3>
-          </div>
+      <div className=" border rounded-lg bg-background">
+        <Accordion type="multiple">
+          <AccordionItem value="error-details">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <h3 className="font-medium text-sm text-destructive">
+                  JSON Patch Error
+                </h3>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
 
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>
+                  <strong>File:</strong> {file_path}
+                </p>
+                <p>
+                  <strong>Operations:</strong> {operations?.length || 0}
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>
-              <strong>File:</strong> {file_path}
-            </p>
-            <p>
-              <strong>Operations:</strong> {operations?.length || 0}
-            </p>
-          </div>
-        </div>
-
-        {/* Debug Section for Error Cases */}
-        <Accordion type="multiple" className="w-full">
-          <DebugInformation rawToolCall={rawToolCall} />
+          {isDebugEnabled && (
+            <AccordionItem value="debug-info">
+              <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  <span className="text-sm font-medium">Debug Information</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4">
+                <DebugInformationTabs input={args} output={result} />
+              </AccordionContent>
+            </AccordionItem>
+          )}
         </Accordion>
       </div>
     );
@@ -252,27 +234,38 @@ export function JSONPatchPreview({
   const totalCount = operations.length;
 
   return (
-    <div className="max-w-4xl border rounded-lg bg-background">
-      {/* Header */}
-      <div className="border-b p-4 flex gap-2">
-        <FileJson className="h-8 w-8" />
-        <div className="flex flex-col  ">
-          <h3 className="font-medium">{description}</h3>
-          <p className="text-sm text-muted-foreground">{file_path}</p>
-        </div>
-      </div>
-
-      {/* Accordion Content */}
+    <div className=" border rounded-lg bg-background">
       <Accordion type="multiple" className="w-full">
         {/* Operations Section */}
         <AccordionItem value="operations">
           <AccordionTrigger className="px-4 py-3 hover:no-underline">
-            <div className="flex items-center justify-between w-full mr-4">
-              <h4 className="font-medium">Operations ({totalCount})</h4>
-              <div className="text-sm text-muted-foreground">
-                {appliedCount > 0 && `${appliedCount} applied, `}
-                {rejectedCount > 0 && `${rejectedCount} rejected, `}
-                {pendingCount > 0 && `${pendingCount} pending`}
+            <div className="flex items-center gap-2 w-full mr-4">
+              <FileJson className="h-5 w-5" />
+              <div className="flex flex-col flex-1 gap-1">
+                <h3 className="text-sm font-medium">{description}</h3>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{file_path}</span>
+                  <span>•</span>
+                  <span>{totalCount} ops</span>
+                  {appliedCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{appliedCount} applied</span>
+                    </>
+                  )}
+                  {rejectedCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{rejectedCount} rejected</span>
+                    </>
+                  )}
+                  {pendingCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{pendingCount} pending</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </AccordionTrigger>
@@ -315,9 +308,19 @@ export function JSONPatchPreview({
             </div>
           </AccordionContent>
         </AccordionItem>
-
-        {/* Raw Tool Call Debug Section */}
-        <DebugInformation rawToolCall={rawToolCall} />
+        {isDebugEnabled && (
+          <AccordionItem value="debug-info">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Code className="h-4 w-4" />
+                <span className="text-sm font-medium">Debug Information</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <DebugInformationTabs input={args} output={result} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   useCopilotAction,
   useCopilotAdditionalInstructions,
 } from "@copilotkit/react-core";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 import { JSONPathPreview, JSONPathLoadingView } from "./json-path-preview";
 import { JSONPathResult, executeQuery } from "./json-path-utils";
 
@@ -18,7 +18,7 @@ export interface JSONPathToolProps {
 }
 
 export function useJSONPathTool() {
-  const { state: editorState } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
 
   useCopilotAdditionalInstructions({
     instructions: `
@@ -83,7 +83,7 @@ export function useJSONPathTool() {
       const { file_path, queries } = args;
 
       // File validation
-      const file = editorState.files[file_path];
+      const file = files[file_path];
       if (!file) {
         const result = {
           success: false,

@@ -4,13 +4,13 @@ import {
   useCopilotAction,
   useCopilotAdditionalInstructions,
 } from "@copilotkit/react-core";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 import { JSONPatchPreview } from "./json-patch-preview";
 import { JsonPatchOperation } from "json-joy/esm/json-patch";
 import { parseJsonValue, validateOperationsIndividually } from "./patch-utils";
 
 export function useJSONPatchTool() {
-  const { state, actions } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
 
   useCopilotAdditionalInstructions({
     instructions: `
@@ -81,7 +81,7 @@ export function useJSONPatchTool() {
     ],
     handler: async (args) => {
       const { file_path, operations } = args;
-      const file = state.files[file_path];
+      const file = files[file_path];
       const patchOperations: JsonPatchOperation[] =
         operations
           ?.map((op) => {
@@ -164,7 +164,7 @@ export function useJSONPatchTool() {
           "Your changes are suggested to user.User will apply this later",
       };
     },
-    render: ({ args, status }) => {
+    render: ({ args, status, result }) => {
       const { file_path, description, operations } = args;
       if (!file_path) {
         return <></>;
@@ -174,7 +174,7 @@ export function useJSONPatchTool() {
       }
 
       // Capture file content at render time for immutable snapshot
-      const file = state.files[file_path];
+      const file = files[file_path];
       const file_content = file?.content || "";
 
       const patchOperations: JsonPatchOperation[] =
@@ -217,11 +217,9 @@ export function useJSONPatchTool() {
       // All operations are valid, show preview
       return (
         <JSONPatchPreview
-          file_path={file_path}
+          args={args}
+          result={result}
           file_content={file_content}
-          description={description}
-          operations={patchOperations || []}
-          status={status}
         />
       );
     },

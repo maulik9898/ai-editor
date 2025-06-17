@@ -15,6 +15,8 @@ import { DebugInformationTabs } from "../common/DebugInformationTabs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { Editor } from "@monaco-editor/react";
 import { JSONPathToolProps } from "./json-path-tool";
+import { Badge } from "@/components/ui/badge";
+import { useDebugStore } from "@/stores/debug-store";
 
 interface JSONPathPreviewProps {
   result: JSONPathResult;
@@ -41,8 +43,9 @@ function FileErrorDisplay({
   result?: JSONPathResult;
   input: JSONPathToolProps;
 }) {
+  const isDebugEnabled = useDebugStore((state) => state.isDebugEnabled);
   return (
-    <div className="max-w-4xl border rounded-lg bg-background">
+    <div className=" border rounded-lg bg-background">
       <div className="border-b p-4">
         <div className="flex items-center gap-2 mb-3">
           <AlertCircle className="h-5 w-5 text-destructive" />
@@ -61,7 +64,7 @@ function FileErrorDisplay({
       </div>
 
       {/* Debug Section */}
-      {result && (
+      {result && isDebugEnabled && (
         <Accordion type="multiple">
           <AccordionItem value="debug-info">
             <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -81,6 +84,7 @@ function FileErrorDisplay({
 }
 
 export function JSONPathPreview({ result, input }: JSONPathPreviewProps) {
+  const isDebugEnabled = useDebugStore((state) => state.isDebugEnabled);
   if (!result.success) {
     return (
       <FileErrorDisplay
@@ -93,24 +97,20 @@ export function JSONPathPreview({ result, input }: JSONPathPreviewProps) {
   }
 
   return (
-    <Accordion
-      type="multiple"
-      className="max-w-4xl border rounded-lg bg-background"
-    >
+    <Accordion type="multiple" className=" border rounded-lg bg-background">
       {/* Header - Now part of main accordion */}
       <AccordionItem value="header" className="border-b">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex  justify-between w-full gap-2 mb-2">
+        <AccordionTrigger className="px-3 py-3 hover:no-underline">
+          <div className="flex  justify-between w-full gap-2 ">
             <div className="flex gap-2">
-              <Search className="h-5 w-5 text-primary" />
-              <h3 className="">{result.file_path}</h3>
+              <Search className="h-4 w-4 self-center text-primary" />
+              <h3 className="text-sm">{result.file_path}</h3>
             </div>
 
             {result.summary && (
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-xs self-center text-muted-foreground ">
                 {result.summary.successful_queries}/
-                {result.summary.total_queries} queries successful •
-                {result.summary.total_matches} total matches
+                {result.summary.total_queries} queries successful
               </div>
             )}
           </div>
@@ -118,7 +118,7 @@ export function JSONPathPreview({ result, input }: JSONPathPreviewProps) {
         <AccordionContent className="px-4 pb-4">
           <Accordion
             type="multiple"
-            className="max-w-4xl border rounded-lg bg-background"
+            className="border rounded-lg bg-background"
           >
             {result.queries.map((queryResult, index) => (
               <AccordionItem
@@ -132,9 +132,11 @@ export function JSONPathPreview({ result, input }: JSONPathPreviewProps) {
                 <AccordionTrigger className={`px-4 py-3 hover:no-underline`}>
                   <div className="flex w-full flex-col gap-2 ">
                     <div className="flex items-center justify-between w-full mr-4">
-                      <h4 className="font-medium">{queryResult.query}</h4>
-                      <div className="text-sm text-muted-foreground">
-                        {result.summary?.total_matches} total matches
+                      <div className="rounded-none text-sm">
+                        <h4 className=" font-mono">{queryResult.query}</h4>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {Object.keys(queryResult.matches || {}).length} matches
                       </div>
                     </div>
                     <p className="text-muted-foreground">
@@ -152,18 +154,19 @@ export function JSONPathPreview({ result, input }: JSONPathPreviewProps) {
       </AccordionItem>
 
       {/* Debug Section */}
-
-      <AccordionItem value="debug-info">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex items-center gap-2">
-            <Code className="h-4 w-4" />
-            <span>Debug Information</span>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="px-4 pb-4">
-          <DebugInformationTabs input={input} output={result} />
-        </AccordionContent>
-      </AccordionItem>
+      {isDebugEnabled && (
+        <AccordionItem value="debug-info">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              <span>Debug Information</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <DebugInformationTabs input={input} output={result} />
+          </AccordionContent>
+        </AccordionItem>
+      )}
     </Accordion>
   );
 }

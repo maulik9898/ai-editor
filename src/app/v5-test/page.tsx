@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { ResizableLayout } from "@/components/layout/resizable-layout";
-import { ChatPanel } from "@/components/chat/chat-panel";
+import { ChatPanelV5 } from "@/components/chat-v5/chat-panel-v5";
 import { EditorPanel } from "@/components/editor/editor-panel";
 
-export default function Home() {
+export default function V5TestPage() {
   const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
 
   const toggleEditorFullscreen = () => {
@@ -21,9 +21,9 @@ export default function Home() {
           onToggleFullscreen={toggleEditorFullscreen}
         />
       ) : (
-        // Normal resizable layout
+        // Normal resizable layout with V5 chat
         <ResizableLayout
-          chatPanel={<ChatPanel />}
+          chatPanel={<ChatPanelV5 />}
           editorPanel={
             <EditorPanel
               isFullscreen={false}

@@ -7,7 +7,6 @@ import { NextRequest } from "next/server";
 
 import { getOpenAIClient } from "@/utils/openai-client";
 
-
 const runtime = new CopilotRuntime({});
 
 export const POST = async (req: NextRequest) => {
@@ -19,7 +18,6 @@ export const POST = async (req: NextRequest) => {
     openai,
     model: process.env.OPENAI_MODEL!,
     keepSystemRole: true,
-    disableParallelToolCalls: true,
   });
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,

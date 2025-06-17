@@ -1,13 +1,14 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
-  FileCheck,
   Code,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   Accordion,
@@ -15,14 +16,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { DebugInformationTabs } from "../common/DebugInformationTabs";
 import {
-  DiagnosticResponse,
-  DiagnosticErrorResponse,
-} from "./diagnostic-utils";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { DebugInformationTabs } from "../common/DebugInformationTabs";
+import { DiagnosticOutput } from "@/tools/diagnostic-tool";
+import { useState } from "react";
+import { useDebugStore } from "@/stores/debug-store";
 
 interface DiagnosticPreviewProps {
-  result: DiagnosticResponse | DiagnosticErrorResponse;
+  result: DiagnosticOutput;
   input: {
     file_path: string;
   };
@@ -30,64 +35,14 @@ interface DiagnosticPreviewProps {
 
 function DiagnosticLoadingView() {
   return (
-    <div className="flex items-center gap-2 p-4 border rounded-lg bg-muted/30">
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-      <span className="text-sm">Analyzing Let's Form schema...</span>
+    <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/30">
+      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+      <span className="text-xs">Analyzing schema...</span>
     </div>
   );
 }
 
-function DiagnosticErrorDisplay({
-  error,
-  filePath,
-  result,
-  input,
-}: {
-  error: string;
-  filePath: string;
-  result: DiagnosticErrorResponse;
-  input: any;
-}) {
-  return (
-    <div className="max-w-4xl border rounded-lg bg-background">
-      <div className="border-b p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="h-5 w-5 text-destructive" />
-          <h3 className="font-medium text-destructive">
-            Schema Analysis Error
-          </h3>
-        </div>
-
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-
-        <div className="text-sm text-muted-foreground">
-          <p>
-            <strong>File:</strong> {filePath}
-          </p>
-        </div>
-      </div>
-
-      {/* Debug Section */}
-      <Accordion type="multiple">
-        <AccordionItem value="debug-info">
-          <AccordionTrigger className="px-4 py-3 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              <span>Debug Information</span>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4">
-            <DebugInformationTabs input={input} output={result} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
-  );
-}
-
-function IssueCard({
+function CompactIssueList({
   title,
   icon,
   issues,
@@ -98,175 +53,201 @@ function IssueCard({
   issues: Record<string, { paths: string[]; component: string }>;
   variant: "destructive" | "warning";
 }) {
+  const [isOpen, setIsOpen] = useState(true);
+
   if (Object.keys(issues).length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h4 className="font-medium">{title}</h4>
-        <Badge
-          variant={variant === "destructive" ? "destructive" : "secondary"}
-        >
-          {Object.keys(issues).length}
-        </Badge>
-      </div>
-
-      <div className="space-y-2">
-        {Object.entries(issues).map(([name, issue]) => (
-          <div
-            key={name}
-            className={`p-3 rounded-md border ${
-              variant === "destructive"
-                ? "border-destructive "
-                : "border-yellow-500 "
-            }`}
+    <div className="space-y-1">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium hover:bg-muted/50 p-1 rounded w-full">
+          {isOpen ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+          {icon}
+          <span>{title}</span>
+          <Badge
+            variant={variant === "destructive" ? "destructive" : "secondary"}
+            className="text-xs h-4"
           >
-            <div className="flex items-start gap-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <code className="text-sm font-mono bg-background px-1 py-0.5 rounded">
-                    {name}
-                  </code>
-                  <Badge variant="outline" className="text-xs">
-                    {issue.component}
-                  </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <span className="font-medium">
-                    {issue.paths.length > 1 ? "Locations:" : "Location:"}
-                  </span>{" "}
-                  {issue.paths.join(", ")}
-                </div>
+            {Object.keys(issues).length}
+          </Badge>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1 ml-4">
+          {Object.entries(issues).map(([name, issue]) => (
+            <div
+              key={name}
+              className="text-xs p-2 rounded border-l-2 bg-muted/20"
+              style={{
+                borderLeftColor:
+                  variant === "destructive"
+                    ? "rgb(239 68 68)"
+                    : "rgb(234 179 8)",
+              }}
+            >
+              <div className="flex items-center gap-1 mb-1">
+                <code className="font-mono text-xs bg-background px-1 rounded">
+                  {name}
+                </code>
+                <Badge variant="outline" className="text-xs h-3 px-1">
+                  {issue.component}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {issue.paths.join(" • ")}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
 
 export function DiagnosticPreview({ result, input }: DiagnosticPreviewProps) {
+  const isDebugEnabled = useDebugStore((state) => state.isDebugEnabled);
   if (!result.success) {
     return (
-      <DiagnosticErrorDisplay
-        error={result.jsonError}
-        filePath={result.file_path}
-        result={result}
-        input={input}
-      />
+      <Accordion type="multiple" className="border rounded-md bg-background">
+        <AccordionItem value="error-analysis">
+          <AccordionTrigger className="px-3 py-3 hover:no-underline">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <span className="text-sm font-medium">Schema Analysis</span>
+                <code className="text-xs bg-muted px-1 rounded">
+                  {input.file_path.split("/").pop()}
+                </code>
+              </div>
+              <Badge variant="destructive" className="text-xs h-5">
+                Error
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3">
+            <div className="space-y-3">
+              <Alert variant="destructive" className="text-xs">
+                <AlertDescription>{result.jsonError}</AlertDescription>
+              </Alert>
+              <div className="text-xs text-muted-foreground">
+                <strong>File:</strong> {input.file_path}
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        {isDebugEnabled && (
+          <AccordionItem value="debug-info">
+            <AccordionTrigger className="px-3 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Code className="h-4 w-4" />
+                <span className="text-sm font-medium">Debug Information</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <DebugInformationTabs input={input} output={result} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+      </Accordion>
     );
   }
 
   const { diagnostics, summary } = result;
-  const hasIssues = summary.totalIssues > 0;
+  const hasIssues = summary && summary.totalIssues > 0;
 
   return (
-    <Accordion
-      type="multiple"
-      className="max-w-4xl border rounded-lg bg-background"
-    >
-      {/* Header */}
-      <AccordionItem value="header" className="border-b">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex justify-between w-full gap-2">
-            <div className="flex items-center gap-2">
+    <Accordion type="multiple" className="border rounded-md bg-background">
+      <AccordionItem value="schema-analysis">
+        <AccordionTrigger className="px-3 py-3 hover:no-underline">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {hasIssues ? (
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
               ) : (
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
               )}
-              <h3 className="font-medium">
-                Let's Form Schema Analysis - {input.file_path}
-              </h3>
+              <span className="text-sm font-medium">Schema Analysis</span>
+              <code className="text-xs bg-muted px-1 rounded truncate">
+                {input.file_path.split("/").pop()}
+              </code>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+
+            <div className="flex items-center gap-1 flex-shrink-0">
               {hasIssues ? (
-                <Badge variant="destructive">
-                  {summary.totalIssues} issues
-                </Badge>
+                <>
+                  {summary.duplicateCount > 0 && (
+                    <Badge variant="destructive" className="text-xs h-5">
+                      {summary.duplicateCount} dup
+                    </Badge>
+                  )}
+                  {summary.invalidCount > 0 && (
+                    <Badge variant="secondary" className="text-xs h-5">
+                      {summary.invalidCount} invalid
+                    </Badge>
+                  )}
+                </>
               ) : (
                 <Badge
                   variant="secondary"
-                  className="text-green-700 bg-green-100"
+                  className="text-green-700 bg-green-100 text-xs h-5"
                 >
-                  ✓ No issues
+                  ✓ Clean
                 </Badge>
               )}
             </div>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="px-4 pb-4">
+
+        <AccordionContent className="px-3 pb-3">
           {hasIssues ? (
-            <div className="space-y-6">
-              {/* Summary */}
-              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-md">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {summary.duplicateCount}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Duplicate Names
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {summary.invalidCount}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Invalid Names
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-3">
+              {diagnostics?.duplicatedNames && (
+                <CompactIssueList
+                  title="Duplicates"
+                  icon={<AlertTriangle className="h-3 w-3 text-red-600" />}
+                  issues={diagnostics.duplicatedNames}
+                  variant="destructive"
+                />
+              )}
 
-              {/* Issues */}
-              <div className="space-y-6">
-                {diagnostics.duplicatedNames && (
-                  <IssueCard
-                    title="Duplicate Field Names"
-                    icon={<AlertTriangle className="h-4 w-4 text-red-600" />}
-                    issues={diagnostics.duplicatedNames}
-                    variant="destructive"
-                  />
-                )}
-
-                {diagnostics.invalidNames && (
-                  <IssueCard
-                    title="Invalid Field Names"
-                    icon={<AlertCircle className="h-4 w-4 text-yellow-600" />}
-                    issues={diagnostics.invalidNames}
-                    variant="warning"
-                  />
-                )}
-              </div>
+              {diagnostics?.invalidNames && (
+                <CompactIssueList
+                  title="Invalid Names"
+                  icon={<AlertCircle className="h-3 w-3 text-yellow-600" />}
+                  issues={diagnostics.invalidNames}
+                  variant="warning"
+                />
+              )}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
-              <h4 className="font-medium text-green-800 mb-1">
+            <div className="text-center py-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <div className="text-sm font-medium text-green-800 mb-1">
                 Schema looks great!
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                No duplicate or invalid field names found.
-              </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                No duplicate or invalid field names found
+              </div>
             </div>
           )}
         </AccordionContent>
       </AccordionItem>
 
-      {/* Debug Section */}
-      <AccordionItem value="debug-info">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline">
-          <div className="flex items-center gap-2">
-            <Code className="h-4 w-4" />
-            <span>Debug Information</span>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="px-4 pb-4">
-          <DebugInformationTabs input={input} output={result} />
-        </AccordionContent>
-      </AccordionItem>
+      {isDebugEnabled && (
+        <AccordionItem value="debug-info">
+          <AccordionTrigger className="px-3 py-3 hover:no-underline">
+            <div className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              <span className="text-sm font-medium">Debug Information</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3">
+            <DebugInformationTabs input={input} output={result} />
+          </AccordionContent>
+        </AccordionItem>
+      )}
     </Accordion>
   );
 }

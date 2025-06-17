@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ai-editor:
-    image: ghcr.io/maulik9898/ai-editor:0.1.0
+    image: ghcr.io/maulik9898/ai-editor:latest
     ports:
       - "3000:3000"
     environment:

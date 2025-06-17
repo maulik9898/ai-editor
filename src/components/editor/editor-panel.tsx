@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Maximize2, Minimize2, Bot } from "lucide-react";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 import { FileTabs } from "./file-tabs";
 import { TabContent } from "./tab-content";
 import { AddFileDialog } from "./add-file-dialog";
@@ -21,15 +21,28 @@ export function EditorPanel({
   onToggleFullscreen,
   className,
 }: EditorPanelProps) {
-  const { state, actions, activeTab } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
+  const tabs = useEditorStore((state) => state.tabs);
+  const activeTabId = useEditorStore((state) => state.activeTabId);
+  const isLoading = useEditorStore((state) => state.isLoading);
+  const error = useEditorStore((state) => state.error);
+  const activeTab = useEditorStore((state) => {
+    return state.tabs.find((t) => t.id === state.activeTabId) || null;
+  });
+  const activeFile = useEditorStore((state) => {
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    return tab ? state.files[tab.filePath] || null : null;
+  });
+  const updateFileContent = useEditorStore((state) => state.updateFileContent);
+  const createNewFile = useEditorStore((state) => state.createNewFile);
+  const switchTab = useEditorStore((state) => state.switchTab);
+  const closeTab = useEditorStore((state) => state.closeTab);
+  const clearError = useEditorStore((state) => state.clearError);
   const { getMonacoTheme } = useTheme();
-
-  // Get active file from active tab
-  const activeFile = activeTab ? state.files[activeTab.filePath] : null;
 
   const handleContentChange = (content: string) => {
     if (activeFile) {
-      actions.updateFileContent(activeFile.path, content);
+      updateFileContent(activeFile.path, content);
     }
   };
 
@@ -68,21 +81,21 @@ export function EditorPanel({
             </Button>
           )}
 
-          <AddFileDialog onCreateFile={actions.createNewFile} />
+          <AddFileDialog onCreateFile={createNewFile} />
         </div>
       </div>
 
       {/* Error Display */}
-      {state.error && (
+      {error && (
         <div className="flex items-center justify-between gap-2 p-3 bg-destructive/10 text-destructive border-b border-destructive/20">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
-            <span className="text-sm">{state.error}</span>
+            <span className="text-sm">{error}</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={actions.clearError}
+            onClick={clearError}
             className="h-auto p-1 text-destructive hover:text-destructive"
           >
             ✕
@@ -92,16 +105,16 @@ export function EditorPanel({
 
       {/* File Tabs */}
       <FileTabs
-        files={state.files}
-        tabs={state.tabs}
-        activeTabId={state.activeTabId}
-        onTabClick={actions.switchTab}
-        onTabClose={actions.closeTab}
+        files={files}
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onTabClick={switchTab}
+        onTabClose={closeTab}
       />
 
       {/* Editor Area */}
-      <div className="flex-1 relative">
-        {state.isLoading ? (
+      <div className="flex-1 relative min-h-0">
+        {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -136,7 +149,7 @@ export function EditorPanel({
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Files: {Object.keys(state.files).length}</span>
+          <span>Files: {Object.keys(files).length}</span>
           {activeFile && activeFile.isDirty && (
             <span className="text-orange-500">● Unsaved changes</span>
           )}

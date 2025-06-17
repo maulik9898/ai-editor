@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     webpackMemoryOptimizations: true,
   },
   output: "standalone",
+  devIndicators: false,
 
   // Disable telemetry
   eslint: {

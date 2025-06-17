@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/resizable";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
+import { DebugToggle } from "../ui/debug-toggle";
 
 interface ResizableLayoutProps {
   chatPanel: React.ReactNode;
@@ -58,12 +59,13 @@ export function ResizableLayout({
           <div className="text-xs text-muted-foreground">
             AI-Powered File Editor
           </div>
+          <DebugToggle size="sm" />
           <ThemeToggle variant="dropdown" size="sm" />
         </div>
       </div>
 
       {/* Resizable Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         {isChatCollapsed ? (
           // Full editor mode
           <div className="h-full w-full">{editorPanel}</div>

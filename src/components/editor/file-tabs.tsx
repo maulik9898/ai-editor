@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Tab } from "@/types/tabs";
 import { EditorFile } from "@/types/editor";
 import { ContextMenu } from "@/components/custom/context-menu";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 
 interface FileTabsProps {
   files: Record<string, EditorFile>;
@@ -22,7 +22,8 @@ export function FileTabs({
   onTabClick,
   onTabClose,
 }: FileTabsProps) {
-  const { actions } = useEditorContext();
+  const openPreview = useEditorStore((state) => state.openPreview);
+  const downloadFile = useEditorStore((state) => state.downloadFile);
 
   if (tabs.length === 0) {
     return null;
@@ -44,7 +45,7 @@ export function FileTabs({
       if (file.language === "json") {
         items.push({
           label: "Open Let's Form Preview",
-          onClick: () => actions.openPreview(tab.filePath, "letsform-preview"),
+          onClick: () => openPreview(tab.filePath, "letsform-preview"),
         });
       }
     }
@@ -52,7 +53,7 @@ export function FileTabs({
     if (file) {
       items.push({
         label: "Download File",
-        onClick: () => actions.downloadFile(tab.filePath),
+        onClick: () => downloadFile(tab.filePath),
         icon: "download", // Optional: for future icon support
       });
     }

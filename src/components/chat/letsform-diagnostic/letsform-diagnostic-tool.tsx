@@ -4,12 +4,12 @@ import {
   useCopilotAction,
   useCopilotAdditionalInstructions,
 } from "@copilotkit/react-core";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 import { diagnoseLetsFormSchema } from "./diagnostic-utils";
 import { DiagnosticPreview, DiagnosticLoadingView } from "./diagnostic-preview";
 
 export function useLetsFormDiagnostic() {
-  const { state } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
 
   useCopilotAdditionalInstructions({
     instructions: `
@@ -49,7 +49,7 @@ export function useLetsFormDiagnostic() {
       }
 
       const { file_path } = args;
-      const file = state.files[file_path];
+      const file = files[file_path];
 
       // File existence validation
       if (!file) {
@@ -95,21 +95,21 @@ export function useLetsFormDiagnostic() {
         const aiResponse = {
           success: true,
           summary: {
-            totalIssues: summary.totalIssues,
-            duplicateCount: summary.duplicateCount,
-            invalidCount: summary.invalidCount,
+            totalIssues: summary?.totalIssues,
+            duplicateCount: summary?.duplicateCount,
+            invalidCount: summary?.invalidCount,
           },
           issues: {
-            duplicates: diagnostics.duplicatedNames
-              ? Object.keys(diagnostics.duplicatedNames)
+            duplicates: diagnostics?.duplicatedNames
+              ? Object.keys(diagnostics?.duplicatedNames)
               : [],
-            invalid: diagnostics.invalidNames
-              ? Object.keys(diagnostics.invalidNames)
+            invalid: diagnostics?.invalidNames
+              ? Object.keys(diagnostics?.invalidNames)
               : [],
           },
           details: {
-            duplicatedNames: diagnostics.duplicatedNames || {},
-            invalidNames: diagnostics.invalidNames || {},
+            duplicatedNames: diagnostics?.duplicatedNames || {},
+            invalidNames: diagnostics?.invalidNames || {},
           },
         };
 

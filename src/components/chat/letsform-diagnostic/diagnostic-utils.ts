@@ -1,3 +1,4 @@
+import { DiagnosticOutput } from "@/tools/diagnostic-tool";
 import { JSONPath } from "jsonpath-plus";
 
 export interface FieldInfo {
@@ -20,18 +21,6 @@ export interface DiagnosticSummary {
   totalIssues: number;
   duplicateCount: number;
   invalidCount: number;
-}
-
-export interface DiagnosticResponse {
-  success: true;
-  diagnostics: DiagnosticResult;
-  summary: DiagnosticSummary;
-}
-
-export interface DiagnosticErrorResponse {
-  success: false;
-  jsonError: string;
-  file_path: string;
 }
 
 /**
@@ -69,11 +58,13 @@ export function extractFields(jsonObj: any): FieldInfo[] {
 /**
  * Find duplicate field names
  */
-export function findDuplicateNames(fields: FieldInfo[]): Record<string, DiagnosticIssue> {
+export function findDuplicateNames(
+  fields: FieldInfo[],
+): Record<string, DiagnosticIssue> {
   const nameGroups = new Map<string, FieldInfo[]>();
 
   // Group fields by name
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (!nameGroups.has(field.name)) {
       nameGroups.set(field.name, []);
     }
@@ -86,7 +77,7 @@ export function findDuplicateNames(fields: FieldInfo[]): Record<string, Diagnost
   nameGroups.forEach((fieldGroup, name) => {
     if (fieldGroup.length > 1) {
       duplicates[name] = {
-        paths: fieldGroup.map(f => f.path),
+        paths: fieldGroup.map((f) => f.path),
         component: fieldGroup[0].component, // Use first occurrence's component
       };
     }
@@ -98,10 +89,12 @@ export function findDuplicateNames(fields: FieldInfo[]): Record<string, Diagnost
 /**
  * Find invalid field names
  */
-export function findInvalidNames(fields: FieldInfo[]): Record<string, DiagnosticIssue> {
+export function findInvalidNames(
+  fields: FieldInfo[],
+): Record<string, DiagnosticIssue> {
   const invalid: Record<string, DiagnosticIssue> = {};
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (!isValidFieldName(field.name)) {
       if (!invalid[field.name]) {
         invalid[field.name] = {
@@ -119,7 +112,9 @@ export function findInvalidNames(fields: FieldInfo[]): Record<string, Diagnostic
 /**
  * Create diagnostic summary
  */
-export function createSummary(diagnostics: DiagnosticResult): DiagnosticSummary {
+export function createSummary(
+  diagnostics: DiagnosticResult,
+): DiagnosticSummary {
   const duplicateCount = Object.keys(diagnostics.duplicatedNames || {}).length;
   const invalidCount = Object.keys(diagnostics.invalidNames || {}).length;
 
@@ -135,8 +130,8 @@ export function createSummary(diagnostics: DiagnosticResult): DiagnosticSummary 
  */
 export function diagnoseLetsFormSchema(
   jsonContent: string,
-  filePath: string
-): DiagnosticResponse | DiagnosticErrorResponse {
+  filePath: string,
+): DiagnosticOutput {
   try {
     // Parse JSON
     const jsonObj = JSON.parse(jsonContent);
@@ -163,12 +158,14 @@ export function diagnoseLetsFormSchema(
     const summary = createSummary(diagnostics);
 
     return {
+      file_path: filePath,
       success: true,
       diagnostics,
       summary,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown JSON parsing error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown JSON parsing error";
 
     return {
       success: false,

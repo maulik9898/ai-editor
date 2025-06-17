@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { useEditorContext } from "@/contexts/editor-context";
+import { useEditorStore } from "@/stores/editor-store";
 import { useKnowledgeBase } from "@/contexts/knowledge-base-context";
 import { JSONRepairUtility, AutoRepairResult } from "@/lib/json-repair";
 import { JSONRepairClient } from "@/lib/json-repair-client";
@@ -17,7 +17,8 @@ export function JSONRepairComponent({
   filePath,
   onResult,
 }: JSONRepairComponentProps) {
-  const { state, actions } = useEditorContext();
+  const files = useEditorStore((state) => state.files);
+  const updateFileContent = useEditorStore((state) => state.updateFileContent);
   const { knowledgeBase } = useKnowledgeBase();
 
   const [validationResult, setValidationResult] = useState<{
@@ -30,7 +31,7 @@ export function JSONRepairComponent({
   const [aiError, setAiError] = useState<string>("");
   const [repairStarted, setRepairStarted] = useState(false);
 
-  const file = state.files[filePath];
+  const file = files[filePath];
 
   // File validation
   if (!file) {
@@ -123,7 +124,7 @@ export function JSONRepairComponent({
 
       if (applyResult.success && applyResult.result) {
         // Apply the changes to the editor
-        actions.updateFileContent(filePath, applyResult.result);
+        updateFileContent(filePath, applyResult.result);
 
         // Validate that the result is actually valid JSON
         const validation = JSONRepairUtility.validateJSON(applyResult.result);
@@ -182,7 +183,14 @@ export function JSONRepairComponent({
 
       onResult(errorResult);
     }
-  }, [aiEdits, file, filePath, actions, onResult, validationResult?.error]);
+  }, [
+    aiEdits,
+    file,
+    filePath,
+    updateFileContent,
+    onResult,
+    validationResult?.error,
+  ]);
 
   const handleReject = useCallback(() => {
     const rejectResult = {
