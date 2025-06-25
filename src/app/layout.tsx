@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
+import { KnowledgeBaseProvider } from "@/contexts/knowledge-base-context";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "@copilotkit/react-ui/styles.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { CopilotKit } from "@copilotkit/react-core";
-import { KnowledgeBaseProvider } from "@/contexts/knowledge-base-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,15 +12,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-export const metadata: Metadata = {
-  title: "AI Editor",
-  description: "AI-powered file editor with intelligent editing capabilities",
-};
-
-// CopilotKit configuration
-const runtimeUrl =
-  process.env.NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL || "/api/copilotkit";
 
 export default function RootLayout({
   children,
@@ -42,16 +30,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <KnowledgeBaseProvider>
-            <CopilotKit
-              forwardedParameters={{
-                temperature: parseFloat(
-                  process.env.NEXT_PUBLIC_TEMPERATURE || "0",
-                ),
-              }}
-              runtimeUrl={runtimeUrl}
-            >
-              {children}
-            </CopilotKit>
+
+            {children}
+
           </KnowledgeBaseProvider>
         </ThemeProvider>
       </body>

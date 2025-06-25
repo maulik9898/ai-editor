@@ -49,62 +49,62 @@ Purpose: AI-readable reference for JSON form generation
 - "component" and "name" are required (except display components)
 - Form data structure uses component names as keys
 
+### Json Path Rules:
+- **JSON Path queries are internal technical operations** - users are not interested in the actual JSONPath syntax or results
+- **Never include JSONPath expressions in user-facing messages** - these are implementation details for data extraction only
+- **Focus on semantic meaning, not technical syntax** - describe what you're looking for ("checking field names" not "querying $..[?(@.component)].name")
+- **Hide technical complexity from users** - present findings and analysis without exposing the underlying query mechanics
+
 ### Query Tool Rules:
-- **ALWAYS use targeted queries** - avoid pulling entire schema unless absolutely necessary
-- **MUST use selective field extraction** - NEVER query without explicitly specifying which fields to return. Always list the exact properties needed using bracket notation like `[name,component,label,hint]`
-- **Start with discovery phase** using minimal token queries to understand structure
-- **Use selective property extraction** - specify only needed properties with `[name,component,label]` syntax
-- **Apply filters before selection** - use `[?(@.component)]` to filter before extracting properties
-- **Chain queries strategically** - start narrow, expand only if needed
-- **Use array slicing** for large datasets - `options[0:3]` to see structure without full data
-- **Cache discovery results** - don't re-query basic structure repeatedly
-- **Query by context** - use different patterns based on user's specific request:
-  - Field modification → `$..[*][?(@.component && @.name=='TARGET_NAME')].[name,component,label,hint,placeholder,disabled,hidden]`
-  - Script analysis → `$..[*][?(@.component && @.script)].[name,component,script]`
-  - Validation review → `$..[*][?(@.component && (@.validation || @.required))].[name,component,required,validation]`
-  - Dependency check → `$..[*][?(@.script && @.script.includes('FIELD_NAME'))].[name,component,script]`
-- **Avoid wildcard selections** - never use `$..* ` or `$..[*].*` without filters
-- **FORBIDDEN: Generic property extraction** - Never use queries ending with just `.*` or without field specification
-- **Token optimization priority** - reduce context size by 60-80% through intelligent querying by requesting only essential fields
+- **PERFORMANCE-AWARE QUERIES** - Choose query strategy based on context and form size
+- **SINGLE PROPERTY QUERIES** - Use separate queries for each property instead of compound queries
+- **BATCH QUERIES IN SINGLE TOOL CALL** - Include all related queries in one tool call with multiple query parameters
+- **AVOID DISCOVERY UNLESS NECESSARY** - For large forms (100+ components), use targeted queries when field names are known
+- **Query Decision Matrix**:
+  - **Known field name** → `$..[?(@.component && @.name=='EXACT_FIELD_NAME')].property`
+  - **Known exact path** → `$.fields[0].component` or `$.fields[2].fields[1].label`
+  - **Layout discovery needed** → Separate queries: `$..[?(@.component=='columns')].name` + `$..[?(@.component=='columns')].component`
+  - **Structure unknown (LAST RESORT)** → `$..[?(@.component)].name`
+- **Query by context patterns**:
+  - Field modification → `$..[?(@.component && @.name=='TARGET_NAME')].component` + `$..[?(@.component && @.name=='TARGET_NAME')].label`
+  - Script analysis → `$..[?(@.component && @.script)].name` + `$..[?(@.component && @.script)].script`
+  - Validation review → `$..[?(@.component && @.validation)].name` + `$..[?(@.component && @.validation)].validation`
+  - Dependency check → `$..[?(@.script && @.script.includes('FIELD_NAME'))].name`
+- **FORBIDDEN: Compound property extraction** - Never use `[name,component,label]` syntax
+- **REQUIRED: Single property per query** - Each query returns exactly one property type
 
 ### Layout Component Query Rules:
-- **NEVER query entire layout objects** - columns, groups, tabs, steps, arrays contain massive nested structures
-- **Always use selective property extraction** for layouts - specify exactly what you need
+- **SEPARATE QUERIES FOR LAYOUT PROPERTIES** - Never use compound property extraction
 - **Query layout containers separately** from their contents to avoid context bloat
-- **When finding component locations** - identify parent layout type and field key
-- **For layout modifications** - query structure first, then target specific paths
-- **CRITICAL: Query layout component names FIRST** - `$..[*][?(@.component=='columns' || @.component=='group' || @.component=='tabs' || @.component=='steps')].[name,component]`
-- **THEN query specific layout details:**
-  - Columns: `$..[*][?(@.component=='columns' && @.name=='LAYOUT_NAME')].columns[*].name`
-  - Tabs: `$..[*][?(@.component=='tabs' && @.name=='LAYOUT_NAME')].tabs[*].[value,label]`
-  - Steps: `$..[*][?(@.component=='steps' && @.name=='LAYOUT_NAME')].tabs[*].[value,label]`
-  - Group: `$..[*][?(@.component=='group' && @.name=='LAYOUT_NAME')].[label,collapsible]`
-- **NEVER query multiple layout structures at once** - always filter by specific name first
+- **Two-step layout discovery process**:
+  - Step 1: Get layout names → `$..[?(@.component=='columns' || @.component=='group' || @.component=='tabs')].name`
+  - Step 2: Get layout types → `$..[?(@.component=='columns' || @.component=='group' || @.component=='tabs')].component`
+- **Specific layout property queries:**
+  - Columns names: `$..[?(@.component=='columns' && @.name=='LAYOUT_NAME')].columns[*].name`
+  - Tab values: `$..[?(@.component=='tabs' && @.name=='LAYOUT_NAME')].tabs[*].value`
+  - Tab labels: `$..[?(@.component=='tabs' && @.name=='LAYOUT_NAME')].tabs[*].label`
+  - Group label: `$..[?(@.component=='group' && @.name=='LAYOUT_NAME')].label`
+  - Group collapsible: `$..[?(@.component=='group' && @.name=='LAYOUT_NAME')].collapsible`
+- **ALWAYS filter by specific layout name** - never query multiple layouts simultaneously
 
 ### Layout Modification Rules:
-- **Before adding to columns** - verify column exists: `$..[*][?(@.component=='columns' && @.name=='LAYOUT_NAME')].columns[*][?(@.name=='COLUMN_NAME')]`
+- **Before adding to columns** - verify column exists: `$..[?(@.component=='columns' && @.name=='LAYOUT_NAME')].columns[*].name`
 - **When adding components** - always update both the component definition AND the parent layout's fields object
 - **For column additions** - check column configuration first, then add to appropriate fields.COLUMN_NAME array
 - **Never modify layout structure** without first querying current column/tab/step names
 - **Always validate field key exists** in parent layout before adding components
-
-### Performance Rules for Layouts:
-- **Query layout metadata first**: `[name,component,columns]` or `[name,component,tabs]`
-- **Then query specific field paths**: `fields.columnName[*].[name,component]`
-- **Avoid deep wildcard queries** on layouts: Never use `$..[*].*` on layout objects
-- **Use parent-child queries** instead of full tree traversal
-- **Limit field extraction** when exploring: `fields.*..[0:3]` for sampling
-
 ### Name Property Rules:
 - Component names MUST be unique across entire form (objects with both `name` and `component` properties)
 - Other `name` fields (columns, options, etc.) only need local uniqueness within their context
 - MUST follow variable naming: start with letter/underscore, contain only letters/numbers/underscores. Should Not contain special characters or spaces.
+- When outputting field names in documentation or messages, wrap them in inline code formatting (backticks) for clear identification
 - Valid: "firstName", "user_email", "field1", "_temp"
 - Invalid: "first-name", "user email", "123field", "my.field"
 - Component names become keys in the form data JSON response - duplicates cause data loss
 - Use `diagnose_letsform_schema` to get all invalid  and duplicates names in form
 - **WHEN CREATING NEW COMPONENTS**: Choose descriptive, semantic names that reflect the field's purpose and data type. Use camelCase convention for consistency. Examples: "emailAddress" not "field1", "birthDate" not "date", "phoneNumber" not "phone", "shippingAddress" not "address2"
 - **BEFORE RENAMING**: When renaming a field, check if it's referenced in scripts using targeted query: `$..[*][?(@.component && @.script && @.script.includes('OLD_FIELD_NAME'))].[name,script]` to find all scripts that reference the field name
+- **WHEN RENAMING COMPONENTS**: Verify the new name is unique across the entire form before applying the change. Ensure the new name doesn't conflict with any existing field names
 
 
 
@@ -1666,15 +1666,20 @@ Validation:
 | Checkbox/Radio | xs, sm, md, lg, xl | sm |
 | Date pickers | xs, sm, md, lg, xl | sm |
 
-### 8. SCRIPT VARIABLE ACCESS
+### 8. SCRIPT VARIABLE ACCESS (AI DECISION MATRIX)
 
-| Variable | Type | Available In | Description |
-|----------|------|--------------|-------------|
-| [fieldName] | any | Scripts only | Direct field value access (current and other fields) |
-| values | object | Scripts only | All form values object |
-| **value** | any | **Validation only** | **Current field value (NOT available in scripts)** |
-| **formValues** | object | **Validation only** | **All form values (same as `values` in scripts)** |
-| context() | function | Scripts & validation | Access context data |
+**IF writing a script function:**
+- ✅ USE: `fieldName` (the actual field name for current field)
+- ✅ USE: `otherFieldName` (other field names directly)
+- ✅ USE: `values.fieldName` (form values object access)
+- ✅ USE: `context('key')` (external data access)
+- ❌ NEVER USE: `value` (not available in scripts)
+
+**IF writing validation:**
+- ✅ USE: `value` (current field value only)
+- ✅ USE: `formValues.fieldName` (other field access)
+- ✅ USE: `context('key')` (external data access)
+- ❌ NEVER USE: bare `fieldName` without formValues prefix
 
 ### 9. RETURN VALUE QUICK REFERENCE
 
@@ -1804,10 +1809,8 @@ Arrays can return different formats:
 - commaSeparated: "John,Jane" (single field only)
 
 ### PERFORMANCE CONSIDERATIONS:
-- onChange validation impacts performance
 - Complex scripts on frequently changing fields slow form
 - Large option arrays (1000+) impact select performance
-- Deeply nested arrays can impact performance
 
 ### FORM DATA STRUCTURE:
 Form submission returns object with field names as keys:
@@ -1845,67 +1848,96 @@ Form submission returns object with field names as keys:
 ## LETSFORM JSON NAVIGATION GUIDE
 
 ### JSONPath Query Patterns for LetsForm:
-Strategic patterns for efficiently discovering and analyzing LetsForm JSON structures using nested syntax
 
-========== START: LETSFORM JSONPATH PATTERNS ==========
+========== CRITICAL QUERY RULES ==========
+
+### **1. PRECISION OVER BREADTH**
+```json
+// ❌ NEVER - recursive finds ALL fields[3] everywhere (expensive)
+"$..fields[3].component"
+
+// ✅ ALWAYS - exact path to specific field (efficient)
+"$.fields[3].component"
+"$.fields[0].fields[3].component"
+```
+
+### **2. SPECIFIC PROPERTIES ONLY**
+```json
+// ❌ NEVER - returns massive nested objects
+"$..[?(@.component && @.name=='field_name')]"
+
+// ✅ ALWAYS - get only properties you need
+"$..[?(@.component && @.name=='field_name')].component"
+"$..[?(@.component && @.name=='field_name')].label"
+```
+
+### **3. COMPONENT FILTER REQUIREMENT**
+```json
+// ❌ WRONG - finds any object with that name
+"$..[?(@.name=='field_78_2')].component"
+
+// ✅ CORRECT - ensures it's actually a component
+"$..[?(@.component && @.name=='field_78_2')].component"
+```
+
+========== QUERY PATTERNS ==========
 
 ### **DISCOVERY QUERIES (include_values: false)**
 
-**Get all component types:**
-```
-$..[*].component
+**Get all component names (use only when structure unknown. Last Resort):**
+```json
+"$..[?(@.component)].name"
 ```
 
-**Get all component names:**
+**Get layout component names:**
+```json
+"$..[?(@.component=='columns' || @.component=='group' || @.component=='tabs')].name"
 ```
-$..[*][?(@.component)].name
-```
-*Only get names from objects that have component key*
 
-**Get name and type of all the component together (MUST use this to get all the compoennts and its name):**
-```
-$..[*][?(@.component)].[name,component]
+**Get layout component types:**
+```json
+"$..[?(@.component=='columns' || @.component=='group' || @.component=='tabs')].component"
 ```
 
 ### **TARGETED QUERIES (include_values: true)**
 
-**Find specific component by name:**
-```
-$..[*][?(@.component && @.name=='email')].[name,component]
+**Find component by exact name:**
+```json
+"$..[?(@.component && @.name=='email')].component"
 ```
 
 **Find components by type:**
-```
-$..[*][?(@.component=='input-text')].[name,label,required]
-```
-
-**Search names with pattern:**
-```
-$..[*][?(@.component && @.name && @.name.includes('address'))].[name,component]
+```json
+"$..[?(@.component=='input-text')].name"
 ```
 
-**Find components with specific properties:**
-```
-$..[*][?(@.component && @.validation)].[name,component,validation.required]
-```
-
-```
-$..[*][?(@.component && @.options)].[name,component,options[0:2]]
-```
-**Find components by script content (useful for locating scripts that reference specific field names):**
-
-```
-$..[?(@.component && @.script && @.script.includes("actual_1"))].[script,name,component]
+**Get specific properties (separate queries):**
+```json
+"$..[?(@.component && @.name=='field_name')].component"
+"$..[?(@.component && @.name=='field_name')].label"
+"$..[?(@.component && @.name=='field_name')].required"
 ```
 
-========== END: LETSFORM JSONPATH PATTERNS ==========
+**Find by script content:**
+```json
+"$..[?(@.component && @.script && @.script.includes('actual_1'))].name"
+```
 
-### **Query Strategy:**
+========== QUERY STRATEGY ==========
 
-1. **Use nested Always syntax** (`$..[*]`) to capture all components throughout form. This is important as most component will be nested inside
-2. **Always check for component key** when getting names or searching
-3. **Start with structure discovery** using include_values: false
-4. **Use targeted queries** with selective properties to manage context size
-5. **Search by patterns** when exploring unfamiliar forms
+### **AI Query Decision Matrix:**
+1. **Known exact path**: `$.fields[0].fields[3].component` (FASTEST)
+2. **Known field name**: `$..[?(@.component && @.name=='FIELD_NAME')].property` (EFFICIENT)
+3. **Unknown structure**: `$..[?(@.component)].name` (EXPENSIVE - use sparingly)
+4. **Layout discovery**: Separate queries for name and type (MEDIUM COST)
+5. **Multiple properties**: Separate queries per property (RELIABLE)
+
+### **Performance Rules for AI:**
+- ✅ **USE**: Direct paths when structure known
+- ✅ **USE**: Targeted queries with exact field names
+- ✅ **USE**: Single property per query
+- ❌ **AVOID**: Full structure discovery for large forms
+- ❌ **NEVER**: Compound property queries `[prop1,prop2]`
+- ❌ **NEVER**: Wildcard selections without filters
 
 ## END OF DOCUMENTATION

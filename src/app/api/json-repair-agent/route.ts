@@ -1,4 +1,3 @@
-import { OpenAI } from "openai";
 import { NextRequest } from "next/server";
 import { getCopilotToken } from "@/utils/copilot-token";
 import { getOpenAIClient } from "@/utils/openai-client";
