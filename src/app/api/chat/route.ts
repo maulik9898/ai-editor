@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: (dataStream) => {
       const result = streamText({
-        model: openai(modelName),
+        model: openai(modelName, { structuredOutputs: false }),
         messages,
         temperature: parseFloat(process.env.NEXT_PUBLIC_TEMPERATURE || "0.7"),
         system: systemPrompt,
