@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Search, Code } from "lucide-react";
 import {
   Accordion,
@@ -10,12 +10,9 @@ import {
 } from "@/components/ui/accordion";
 
 import { QueryResultCard } from "./query-result-card";
-import { JSONPathResult } from "./json-path-utils";
-import { DebugInformationTabs } from "../common/DebugInformationTabs";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
-import { Editor } from "@monaco-editor/react";
-import { JSONPathToolProps } from "./json-path-tool";
-import { Badge } from "@/components/ui/badge";
+import { JSONPathResult } from "./utils";
+import { DebugInformationTabs } from "@/components/common/DebugInformationTabs";
+import { JsonPathInput as JSONPathToolProps } from "./index";
 import { useDebugStore } from "@/stores/debug-store";
 
 interface JSONPathPreviewProps {

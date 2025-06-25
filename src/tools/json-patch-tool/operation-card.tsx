@@ -21,12 +21,76 @@ import {
   X,
   AlertCircle,
 } from "lucide-react";
-import { DiffEditor } from "@monaco-editor/react";
+import { parseDiff, Diff, Hunk, Decoration } from "react-diff-view";
+import { createTwoFilesPatch } from "diff";
 import {
   generatePatchPreview,
   validateOperationsIndividually,
-} from "./patch-utils";
+} from "./utils";
 import { JsonPatchOperation } from "json-joy/esm/json-patch";
+
+// Import react-diff-view styles
+import "react-diff-view/style/index.css";
+
+// Custom styles using react-diff-view CSS variables and class names
+const diffStyles = `
+  .diff-container {
+    /* Light mode CSS variables */
+    --diff-background-color: hsl(var(--background));
+    --diff-text-color: hsl(var(--foreground));
+    --diff-font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    
+    /* Gutter colors for light mode */
+    --diff-gutter-insert-background-color: #f0fdf4;
+    --diff-gutter-insert-text-color: #16a34a;
+    --diff-gutter-delete-background-color: #fef2f2;
+    --diff-gutter-delete-text-color: #dc2626;
+    
+    /* Code colors for light mode */
+    --diff-code-insert-background-color: #f0fdf4;
+    --diff-code-insert-text-color: #15803d;
+    --diff-code-delete-background-color: #fef2f2;
+    --diff-code-delete-text-color: #991b1b;
+  }
+  
+  /* Dark mode CSS variables */
+  .dark .diff-container {
+    --diff-background-color: hsl(var(--background));
+    --diff-text-color: #f1f5f9;
+    
+    /* Gutter colors for dark mode */
+    --diff-gutter-insert-background-color: #14532d;
+    --diff-gutter-insert-text-color: #86efac;
+    --diff-gutter-delete-background-color:rgba(127, 29, 29, 0.67);
+    --diff-gutter-delete-text-color: #fca5a5;
+    
+    /* Code colors for dark mode */
+    --diff-code-insert-background-color: #14532d;
+    --diff-code-insert-text-color: #bbf7d0;
+    --diff-code-delete-background-color:rgba(127, 29, 29, 0.67);
+    --diff-code-delete-text-color: #fecaca;
+  }
+  
+  /* Additional styling for better appearance */
+  .diff-container .diff {
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  
+  .diff-container .diff-code {
+    padding: 0 12px;
+    line-height: 1.5;
+  }
+  
+  .diff-container .diff-gutter {
+    min-width: 60px;
+    padding: 0 8px;
+    font-weight: 500;
+    text-align: center;
+    border-right: 1px solid hsl(var(--border));
+  }
+`;
 
 interface OperationCardProps {
   operation: JsonPatchOperation;
@@ -47,14 +111,13 @@ export function OperationCard({
   originalContent,
   disabled = false,
 }: OperationCardProps) {
-  const [diffData, setDiffData] = useState<string | null>(null);
+  const [diffFiles, setDiffFiles] = useState<any[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValid, setIsValid] = useState<boolean>(true);
-  const [editorMounted, setEditorMounted] = useState(false);
+  const [diffLoading, setDiffLoading] = useState(false);
 
   // Store immutable snapshot of original content using ref
   const immutableOriginalContentRef = useRef<string>("");
-  const editorRef = useRef<any>(null);
 
   // Initialize ref with original content when we have valid content
   useEffect(() => {
@@ -94,49 +157,56 @@ export function OperationCard({
 
   const generateDiffData = useCallback(() => {
     try {
+      setDiffLoading(true);
+      
       // Generate the modified content for this single operation
       const content = immutableOriginalContentRef.current || originalContent;
       const preview = generatePatchPreview(content, [operation]);
 
       if (!preview.isValid) {
         console.error("Preview generation failed:", preview.error);
+        setDiffLoading(false);
         return;
       }
-      setDiffData(preview.modifiedContent);
+
+            // Format JSON content for better diff readability
+      const formattedOriginal = JSON.stringify(JSON.parse(content), null, 2);
+      const formattedModified = JSON.stringify(JSON.parse(preview.modifiedContent), null, 2);
+
+      // Create a unified diff patch using git-style format with context
+      const rawPatch = createTwoFilesPatch(
+        "original.json",
+        "modified.json",
+        content,
+        preview.modifiedContent,
+        "Original",
+        "Modified",
+        { context: 3 } 
+      );
+
+      // Add git diff header that react-diff-view expects
+      const GIT_DIFF_HEADER = `diff --git a/original.json b/modified.json
+index 1111111..2222222 100644`;
+      
+      const patch = GIT_DIFF_HEADER + '\n' + rawPatch;
+
+      // Use react-diff-view's built-in parseDiff
+      const files = parseDiff(patch, { 
+        nearbySequences: "zip" // Better display for nearby changes
+      });
+      console.log("Files:", files);
+
+      setDiffFiles(files);
+      setDiffLoading(false);
     } catch (error) {
       console.error("Failed to generate diff data:", error);
+      setDiffLoading(false);
     }
   }, [operation, originalContent]);
 
-  const handleEditorMount = useCallback((editor: any, monaco: any) => {
-    editorRef.current = editor;
-    setEditorMounted(true);
-  }, []);
-
-  const handleEditorWillUnmount = useCallback(() => {
-    setEditorMounted(false);
-    if (editorRef.current) {
-      try {
-        editorRef.current.dispose();
-      } catch (error) {
-        // Ignore disposal errors
-        console.warn("Monaco editor disposal warning:", error);
-      }
-      editorRef.current = null;
-    }
-  }, []);
-
-  // Cleanup on unmount and reset diffData when operation changes
+  // Reset diffFiles when operation changes to prevent stale data
   useEffect(() => {
-    return () => {
-      handleEditorWillUnmount();
-      setDiffData(null);
-    };
-  }, [handleEditorWillUnmount]);
-
-  // Reset diffData when operation changes to prevent stale data
-  useEffect(() => {
-    setDiffData(null);
+    setDiffFiles([]);
   }, [
     operation.op,
     operation.path,
@@ -184,6 +254,7 @@ export function OperationCard({
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
   const getStatusColor = (status: string, isValid: boolean) => {
     switch (status) {
       case "applied":
@@ -193,6 +264,60 @@ export function OperationCard({
       default:
         return isValid ? "border-border bg-background" : "border-red-500/30"; // Error styling for invalid operations
     }
+  };
+
+  const renderFile = (file: any) => {
+    const renderHunksWithCollapse = (hunks: any[]) => {
+      const result: any[] = [];
+      
+      hunks.forEach((hunk, index) => {
+        // Add collapse indicator if there's a gap between hunks
+        if (index > 0) {
+          const prevHunk = hunks[index - 1];
+          const currentHunk = hunk;
+          
+          // Calculate if there's a significant gap
+          const prevEnd = prevHunk.oldStart + prevHunk.oldLines;
+          const currentStart = currentHunk.oldStart;
+          const gap = currentStart - prevEnd;
+          
+          if (gap > 1) {
+            const collapseText = `... ${gap} lines hidden ...`;
+            result.push(
+              <Decoration key={`collapse-${index}`}>
+                <div className=" !bg-muted flex justify-center text-muted-foreground">
+                  {collapseText}
+                </div>
+              </Decoration>
+            );
+          }
+        }
+        
+        // Add the actual hunk
+        result.push(
+          <Hunk key={hunk.content} hunk={hunk} />
+        );
+      });
+      
+      return result;
+    };
+
+    return (
+      <>
+        <style dangerouslySetInnerHTML={{ __html: diffStyles }} />
+        <div className="diff-container rounded-md overflow-hidden bg-background">
+          <Diff 
+            key={file.oldRevision + "-" + file.newRevision} 
+            viewType="unified" 
+            diffType={file.type}
+            hunks={file.hunks}
+            className="text-sm font-mono"
+          >
+            {renderHunksWithCollapse}
+          </Diff>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -208,7 +333,7 @@ export function OperationCard({
           <AccordionTrigger
             className="px-2 py-2 hover:no-underline"
             onClick={() => {
-              if (isValid && !diffData) {
+              if (isValid && diffFiles.length === 0) {
                 generateDiffData();
               }
             }}
@@ -295,25 +420,6 @@ export function OperationCard({
           </AccordionTrigger>
           <AccordionContent className="p-0 rounded-b-md">
             <div className="bg-muted/30 w-full h-full rounded-b-md">
-              <div className="p-2">
-                {/* Operation Details */}
-                <span className="font-mono text-muted-foreground">
-                  {operation.path}
-                </span>
-                {operation.op === "add" || operation.op === "replace" ? (
-                  <span className="ml-2 text-muted-foreground">
-                    →{" "}
-                    {typeof operation.value === "string"
-                      ? `"${operation.value}"`
-                      : JSON.stringify(operation.value)}
-                  </span>
-                ) : null}
-                {operation.op === "move" || operation.op === "copy" ? (
-                  <span className="ml-2 text-muted-foreground">
-                    ← {operation.from}
-                  </span>
-                ) : null}
-              </div>
               {!isValid ? (
                 <div className="p-4 text-center text-red-600">
                   <AlertCircle className="h-8 w-8 mx-auto mb-2" />
@@ -324,39 +430,19 @@ export function OperationCard({
                 </div>
               ) : (
                 <div className="h-full">
-                  {diffData ? (
-                    <div className="min-h-full h-full rounded-b-lg overflow-hidden bg-background w-full">
-                      <DiffEditor
-                        key={`diff-${index}-${operation.op}-${operation.path}`}
-                        height="200px"
-                        language="json"
-                        original={
-                          immutableOriginalContentRef.current || originalContent
-                        }
-                        modified={diffData}
-                        originalModelPath={`immutable://operation-${index}-original.json`}
-                        modifiedModelPath={`inmemory://operation-${index}-modified.json`}
-                        options={{
-                          readOnly: true,
-                          renderOverviewRuler: false,
-                          compactMode: true,
-                          onlyShowAccessibleDiffViewer: true,
-                        }}
-                        className="w-full min-h-full"
-                        theme="vs-dark"
-                        keepCurrentOriginalModel={false}
-                        keepCurrentModifiedModel={false}
-                        onMount={handleEditorMount}
-                        loading={
-                          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                            Loading diff...
-                          </div>
-                        }
-                      />
+                  {diffLoading ? (
+                    <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                      Loading diff...
+                    </div>
+                  ) : diffFiles.length > 0 ? (
+                    <div className="min-h-[200px] rounded-b-lg overflow-hidden bg-background w-full p-2">
+                      <div className="diff-view-container text-xs max-h-[400px] overflow-auto">
+                        {diffFiles.map(renderFile)}
+                      </div>
                     </div>
                   ) : (
                     <div className="border rounded-b-md p-4 bg-background text-center text-muted-foreground text-sm">
-                      Loading diff preview...
+                      Click to load diff preview...
                     </div>
                   )}
                 </div>

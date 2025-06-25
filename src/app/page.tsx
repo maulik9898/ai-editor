@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ResizableLayout } from "@/components/layout/resizable-layout";
+import { useState } from "react";
+
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { EditorPanel } from "@/components/editor/editor-panel";
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { ToolDefinition } from "../types/tools";
-import { JSONRepairComponent } from "@/components/chat/json-repair/json-repair-component";
+import { ToolDefinition } from "@/types/tools";
+import { JSONRepairComponent } from "./component";
 import { ToolInvocation } from "ai";
-import { JSONRepairResultView } from "./json-repair-tool/json-repair-result";
+import { JSONRepairResultView } from "./json-repair-result";
 
 // Define input schema
 const jsonRepairInputSchema = z.object({

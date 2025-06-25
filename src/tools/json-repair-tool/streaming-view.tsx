@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Zap, X } from "lucide-react";
+import { Zap, X } from "lucide-react";
 
 interface StreamingRepairViewProps {
   isStreaming: boolean;

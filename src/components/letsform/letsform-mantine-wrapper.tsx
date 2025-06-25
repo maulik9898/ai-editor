@@ -1,6 +1,6 @@
 "use client";
 
-import { createTheme, MantineProvider } from "@mantine/core";
+import { MantineProvider } from "@mantine/core";
 import LetsForm from "lets-form/react-mantine";
 import { useTheme } from "@/hooks/use-theme";
 import { useFieldInspector } from "@/hooks/use-field-inspector";
@@ -8,7 +8,7 @@ import { useFieldInspector } from "@/hooks/use-field-inspector";
 // Import scoped styles
 import "./mantine-isolated.css";
 import "./field-inspector.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface LetsFormMantineProps {
   formData: any;

@@ -1,4 +1,4 @@
-import { DebugInformationTabs } from "@/components/chat/common/DebugInformationTabs";
+import { DebugInformationTabs } from "@/components/common/DebugInformationTabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDebugStore } from "@/stores/debug-store";
 

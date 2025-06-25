@@ -23,7 +23,7 @@ export function CodeBlock({ children, className, language }: CodeBlockProps) {
   };
 
   return (
-    <div className="relative group my-4 border  rounded-xl bg-muted/20 shadow-sm">
+    <div className="relative  group my-4 border  rounded-xl bg-muted/20 shadow-sm">
       {/* Language badge and copy button */}
       <div className="flex items-center justify-between p-1">
         {language && (
@@ -52,7 +52,7 @@ export function CodeBlock({ children, className, language }: CodeBlockProps) {
           className,
         )}
       >
-        <code className="font-mono text-sm leading-relaxed">{children}</code>
+        <code className="font-mono  leading-relaxed">{children}</code>
       </pre>
     </div>
   );

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ToolDefinition } from "../types/tools";
-import { JSONPatchPreview } from "@/components/chat/json-patch/json-patch-preview";
+import { ToolDefinition } from "@/types/tools";
+import { JSONPatchPreview } from "./preview";
 import { ToolInvocation } from "ai";
 import { JsonPatchOperation } from "json-joy/esm/json-patch";
 
@@ -26,7 +26,7 @@ const jsonPatchInputSchema = z.object({
             "JSON Pointer path (e.g. '/config/debug'). Index starts with 0",
           ),
         value: z
-          .string()
+          .any()
           .optional()
           .describe(
             "Value for add/replace operations (not required for remove, pass empty string)",
@@ -80,7 +80,7 @@ export const jsonPatchTool: ToolDefinition<JsonPatchInput, JsonPatchOutput> = {
     try {
       const { getEditorState } = await import("@/stores/editor-store");
       const { validateOperationsIndividually, parseJsonValue } = await import(
-        "@/components/chat/json-patch/patch-utils"
+        "./utils"
       );
 
       // Get file from editor store

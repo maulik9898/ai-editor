@@ -3,14 +3,14 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useEditorStore } from "@/stores/editor-store";
 import { useKnowledgeBase } from "@/contexts/knowledge-base-context";
-import { JSONRepairUtility, AutoRepairResult } from "@/lib/json-repair";
+import { JSONRepairUtility } from "@/lib/json-repair";
 import { JSONRepairClient } from "@/lib/json-repair-client";
 import { EditParser, SearchReplaceEdit } from "@/lib/edit-parser";
-import { JSONRepairPreview } from "./json-repair-preview";
+import { JSONRepairPreview } from "./preview";
 
 interface JSONRepairComponentProps {
   filePath: string;
-  onResult: (result: any) => void;
+  onResult: (result: Record<string, unknown>) => void;
 }
 
 export function JSONRepairComponent({
@@ -26,62 +26,17 @@ export function JSONRepairComponent({
     error?: string;
   } | null>(null);
   const [isStreamingAI, setIsStreamingAI] = useState(false);
-  const [streamedContent, setStreamedContent] = useState("");
   const [aiEdits, setAiEdits] = useState<SearchReplaceEdit[]>([]);
   const [aiError, setAiError] = useState<string>("");
   const [repairStarted, setRepairStarted] = useState(false);
 
   const file = files[filePath];
 
-  // File validation
-  if (!file) {
-    useEffect(() => {
-      onResult({
-        success: false,
-        error: `File "${filePath}" not found`,
-      });
-    }, [filePath, onResult]);
-
-    return <div className="text-red-600">File not found: {filePath}</div>;
-  }
-
-  if (file.language !== "json" && file.language !== "jsonc") {
-    useEffect(() => {
-      onResult({
-        success: false,
-        error: `File is not JSON (detected: ${file.language})`,
-      });
-    }, [file.language, onResult]);
-
-    return <div className="text-red-600">Not a JSON file: {filePath}</div>;
-  }
-
-  // Validate JSON and start AI repair automatically
-  useEffect(() => {
-    if (!validationResult && file && !repairStarted) {
-      const validation = JSONRepairUtility.validateJSON(file.content);
-      setValidationResult(validation);
-
-      if (!validation.isValid) {
-        setRepairStarted(true);
-        // Start AI repair immediately
-        tryAIRepair(validation.error || "Unknown JSON error");
-      } else {
-        // JSON is already valid
-        onResult({
-          success: true,
-          message: "JSON is already valid - no repair needed",
-        });
-      }
-    }
-  }, [file, validationResult, repairStarted]);
-
   const tryAIRepair = useCallback(
     async (errorMessage: string) => {
       if (!file) return;
 
       setIsStreamingAI(true);
-      setStreamedContent("");
       setAiError("");
       setAiEdits([]);
 
@@ -90,8 +45,8 @@ export function JSONRepairComponent({
           content: file.content,
           error: errorMessage,
           knowledgeBase: knowledgeBase || undefined,
-          onChunk: (chunk) => {
-            setStreamedContent((prev) => prev + chunk);
+          onChunk: () => {
+            // Handle chunk if needed
           },
           onComplete: (fullResponse) => {
             setIsStreamingAI(false);
@@ -117,6 +72,26 @@ export function JSONRepairComponent({
     },
     [file, knowledgeBase],
   );
+
+  // Validate JSON and start AI repair automatically
+  useEffect(() => {
+    if (!validationResult && file && !repairStarted) {
+      const validation = JSONRepairUtility.validateJSON(file.content);
+      setValidationResult(validation);
+
+      if (!validation.isValid) {
+        setRepairStarted(true);
+        // Start AI repair immediately
+        tryAIRepair(validation.error || "Unknown JSON error");
+      } else {
+        // JSON is already valid
+        onResult({
+          success: true,
+          message: "JSON is already valid - no repair needed",
+        });
+      }
+    }
+  }, [file, validationResult, repairStarted, onResult, tryAIRepair]);
 
   const handleApproveAIRepair = useCallback(() => {
     if (aiEdits.length > 0 && file) {
@@ -206,13 +181,17 @@ export function JSONRepairComponent({
     if (validationResult?.error) {
       setAiEdits([]);
       setAiError("");
-      setStreamedContent("");
       tryAIRepair(validationResult.error);
     }
   }, [validationResult?.error, tryAIRepair]);
 
+  // Early returns after all hooks
   if (!file) {
-    return null;
+    return <div className="text-red-600">File not found: {filePath}</div>;
+  }
+
+  if (file.language !== "json" && file.language !== "jsonc") {
+    return <div className="text-red-600">Not a JSON file: {filePath}</div>;
   }
 
   return (

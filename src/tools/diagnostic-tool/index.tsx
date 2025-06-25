@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { ToolDefinition } from "../types/tools"; // Fixed import path
-import { DiagnosticPreview } from "@/components/chat/letsform-diagnostic/diagnostic-preview";
+import { ToolDefinition } from "@/types/tools";
 import { ToolInvocation } from "ai";
+import { z } from "zod";
+import { DiagnosticPreview } from "./preview";
 
 // Define input schema
 const diagnosticInputSchema = z.object({
@@ -79,9 +79,7 @@ export const diagnosticTool: ToolDefinition<DiagnosticInput, DiagnosticOutput> =
 
     clientExecute: async (args: DiagnosticInput): Promise<DiagnosticOutput> => {
       try {
-        const { diagnoseLetsFormSchema } = await import(
-          "@/components/chat/letsform-diagnostic/diagnostic-utils"
-        );
+        const { diagnoseLetsFormSchema } = await import("./utils");
         const { getEditorState } = await import("@/stores/editor-store");
 
         // Get file content from editor store

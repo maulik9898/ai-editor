@@ -21,8 +21,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { DebugInformationTabs } from "../common/DebugInformationTabs";
-import { DiagnosticOutput } from "@/tools/diagnostic-tool";
+import { DebugInformationTabs } from "@/components/common/DebugInformationTabs";
+import { DiagnosticOutput } from "./index";
 import { useState } from "react";
 import { useDebugStore } from "@/stores/debug-store";
 

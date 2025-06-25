@@ -1,11 +1,7 @@
 import { Editor } from "@monaco-editor/react";
-import {
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@radix-ui/react-accordion";
+
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Code } from "lucide-react";
 
 export function DebugInformationTabs({
   input,

@@ -1,13 +1,8 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useRef, KeyboardEvent } from "react";
 import {
-  Send,
-  Plus,
-  Paperclip,
-  Search,
   ArrowUp,
-  Square,
   CircleStop,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

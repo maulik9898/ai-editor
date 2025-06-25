@@ -12,12 +12,12 @@ export function InlineCode({ children, className }: InlineCodeProps) {
     <code
       className={cn(
         // Base styling
-        "relative inline-flex items-center px-1.5 py-0.5 rounded-md text-sm font-mono",
+        "relative p-0.5 inline-flex items-center px-0.5 rounded-md text-xs font-mono",
         // Theme colors to match Monaco Editor
         "bg-muted/60 text-foreground border border-border/50",
 
         // Typography
-        "font-medium tracking-tight",
+        " tracking-tight",
         // Prevent line breaks in inline code
         "whitespace-nowrap",
         className,

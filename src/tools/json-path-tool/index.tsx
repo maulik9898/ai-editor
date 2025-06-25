@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ToolDefinition } from "../types/tools";
-import { JSONPathPreview } from "@/components/chat/json-path/json-path-preview";
+import { ToolDefinition } from "@/types/tools";
+import { JSONPathPreview } from "./preview";
 import { ToolInvocation } from "ai";
 
 // Define input schema
@@ -88,9 +88,7 @@ export const jsonPathTool: ToolDefinition<JsonPathInput, JsonPathOutput> = {
   clientExecute: async (args: JsonPathInput): Promise<JsonPathOutput> => {
     try {
       const { getEditorState } = await import("@/stores/editor-store");
-      const { executeQuery } = await import(
-        "@/components/chat/json-path/json-path-utils"
-      );
+      const { executeQuery } = await import("./utils");
 
       // Get file from editor store
       const editorState = getEditorState();

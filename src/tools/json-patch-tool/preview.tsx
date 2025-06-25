@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileJson, Code } from "lucide-react";
 import {
@@ -12,17 +11,12 @@ import {
 } from "@/components/ui/accordion";
 import { OperationCard } from "./operation-card";
 import {
-  PatchPreviewData,
   generatePatchPreview,
-  isValidJSON,
-  validateOperationsIndividually,
-} from "./patch-utils";
-import { EditorState } from "@/types/editor";
-import { JsonPatchOperation } from "json-joy/esm/json-patch";
+} from "./utils";
 import { useEditorStore } from "@/stores/editor-store";
-import { DebugInformationTabs } from "../common/DebugInformationTabs";
+import { DebugInformationTabs } from "@/components/common/DebugInformationTabs";
 import { useDebugStore } from "@/stores/debug-store";
-import { JsonPatchInput, JsonPatchOutput } from "@/tools/json-patch-tool";
+import { JsonPatchInput, JsonPatchOutput } from "./index";
 
 type OperationStatus = "pending" | "applied" | "rejected";
 

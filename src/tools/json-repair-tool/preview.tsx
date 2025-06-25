@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  AlertTriangle,
-  Check,
-  X,
-  AlertCircle,
-  Brain,
-  Database,
-} from "lucide-react";
-import { SearchReplaceEdit, EditParser } from "@/lib/edit-parser";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EditParser, SearchReplaceEdit } from "@/lib/edit-parser";
 import { DiffEditor } from "@monaco-editor/react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Brain,
+  Check,
+  Database,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface JSONRepairPreviewProps {
   originalContent: string;

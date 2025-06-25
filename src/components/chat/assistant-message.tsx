@@ -1,6 +1,5 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
 import { Markdown } from "../markdown/markdown";
 
 interface AssistantMessageProps {
