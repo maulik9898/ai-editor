@@ -8,7 +8,7 @@ import {
   FileJson,
   FileCode,
 } from "lucide-react";
-import { QueryResult } from "./json-path-utils";
+import { QueryResult } from "./utils";
 import Editor from "@monaco-editor/react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
