@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import { MessageCircle, RotateCcw, Settings, X, Copy } from "lucide-react";
+import {
+  MessageCircle,
+  RotateCcw,
+  Settings,
+  X,
+  Copy,
+  ArrowDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useEditorStore } from "@/stores/editor-store";
@@ -20,21 +27,18 @@ import { TokenUsage } from "./token-usage";
 import { TokenUsageData } from "@/types/token-usage";
 import { ChatInput } from "./chat-input";
 import { AssistantMessage } from "./assistant-message";
+import { useChatScrollManager } from "@/hooks/use-chat-scroll-manager";
+import { Messages } from "./messages";
 
 export function ChatPanel() {
   const files = useEditorStore((state) => state.files);
-  const activeTab = useEditorStore((state) => {
-    return state.tabs.find((t) => t.id === state.activeTabId) || null;
-  });
   const activeFile = useEditorStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab ? state.files[tab.filePath] || null : null;
   });
   const { knowledgeBase } = useKnowledgeBase();
   const [showSettings, setShowSettings] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [isUserNearBottom, setIsUserNearBottom] = useState(true);
+
   const [enabledTools, setEnabledTools] = useState<ToolName[]>([
     "diagnose_letsform_schema",
     "query_json_path",
@@ -57,7 +61,7 @@ export function ChatPanel() {
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error("Failed to copy text: ", err);
     }
   }, []);
 
@@ -165,30 +169,28 @@ export function ChatPanel() {
     return (latestTokenData as TokenUsageData | undefined)?.usage;
   }, [data]);
 
+  const {
+    containerRef: messagesContainerRef,
+    endRef: messagesEndRef,
+    scrollToBottom,
+    showScrollToBottomButton,
+  } = useChatScrollManager(activeFile?.path || "default", status, messages);
+
   const isChatLoading = status === "submitted" || status === "streaming";
 
-  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
-  };
-
-  const checkIfUserNearBottom = () => {
-    if (!messagesContainerRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } =
-      messagesContainerRef.current;
-    const threshold = 100;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold;
-    setIsUserNearBottom(isNearBottom);
-  };
-
-  const resetChat = () => {
+  const resetChat = useCallback(() => {
     if (isChatLoading) {
       stop();
     }
     setMessages([]);
     setData(undefined);
-    setIsUserNearBottom(true);
-  };
+    setTimeout(() => scrollToBottom("instant"), 100);
+  }, [isChatLoading, stop, setMessages, setData, scrollToBottom]);
+
+  const handleSubmitMessage = useCallback(() => {
+    const event = { preventDefault: () => {} };
+    handleSubmit(event);
+  }, [handleSubmit]);
 
   return (
     <div className="flex flex-col h-full bg-background border-r border-border">
@@ -289,118 +291,41 @@ export function ChatPanel() {
       )}
 
       {/* Messages Area */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4"
-        onScroll={checkIfUserNearBottom}
-      >
-        {messages.length === 0 &&
-          !isChatLoading && ( // Added !isChatLoading
-            <div className="text-center text-muted-foreground py-8">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">
-                Welcome to AI Assistant
-              </p>
+      <div className="relative flex-1">
+        <div
+          ref={messagesContainerRef}
+          className="absolute inset-0 overflow-y-auto p-4"
+        >
+          <Messages
+            messages={messages}
+            isLoading={isChatLoading}
+            onCopyToClipboard={copyToClipboard}
+            addToolResult={addToolResult}
+            endRef={messagesEndRef}
+          />
+        </div>
 
-            </div>
-          )}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex w-full ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={
-                message.role === "user" ? "flex justify-end w-full" : "w-full"
-              }
+        {/* Scroll to Bottom Button */}
+        {showScrollToBottomButton && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+            <Button
+              onClick={() => scrollToBottom("smooth")}
+              size="icon"
+              className="h-10 w-10 rounded-full shadow-lg"
+              title="Scroll to bottom"
             >
-              {/* Handle message parts */}
-              {message.parts?.map((part, index) => {
-                switch (part.type) {
-                  case "text":
-                    return (
-                      <div key={index} className="group flex flex-col w-full">
-                        <div
-                          className={`rounded-lg text-xs py-2 px-2 inline-block ${message.role === "user"
-                            ? "bg-primary text-primary-foreground max-w-[90%] self-end"
-                            : "max-w-[90%]"
-                            }`}
-                        >
-                          {message.role === "assistant" ? (
-                            // Use react-markdown for assistant text
-                            <AssistantMessage message={part.text} className="" />
-                          ) : (
-                            // Plain text for user messages
-                            part.text
-                          )}
-                        </div>
-                        {/* Copy button - below the message, aligned based on message type */}
-                        <div className={` ${message.role === "user" ? "text-right mt-1" : "text-left"}`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-muted rounded-sm"
-                            onClick={() => copyToClipboard(part.text)}
-                            title="Copy message"
-                          >
-                            <Copy className="h-2 w-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-
-                  case "tool-invocation": {
-                    const renderer = getToolRenderer(
-                      part.toolInvocation.toolName,
-                    );
-                    return renderer ? (
-                      <div key={index} className="w-full my-2">
-                        {renderer(part.toolInvocation, addToolResult)}
-                      </div>
-                    ) : (
-                      <div
-                        key={index}
-                        className="w-full text-muted-foreground italic"
-                      >
-                        Tool "{part.toolInvocation.toolName}" executed
-                      </div>
-                    );
-                  }
-
-                  default:
-                    return null;
-                }
-              })}
-            </div>
-          </div>
-        ))}
-
-        {/* Loading indicator when AI is responding */}
-        {isChatLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
-              <div className="flex items-center space-x-2">
-                <span className="text-muted-foreground animate-bounce">
-                  ...
-                </span>
-              </div>
-            </div>
+              <ArrowDown className="h-5 w-5" />
+            </Button>
           </div>
         )}
-
-        {/* Invisible element to scroll to */}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className=" p-4">
+      <div className="p-4">
         <ChatInput
           value={input}
           onChange={handleInputChange}
-          onSubmit={(value) => {
-            const event = { preventDefault: () => { } };
-            handleSubmit(event);
-          }}
+          onSubmit={handleSubmitMessage}
           onStop={stop}
           disabled={isChatLoading}
           placeholder="Type your message..."

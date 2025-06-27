@@ -25,10 +25,31 @@ export async function POST(req: Request) {
     headers["Copilot-Integration-Id"] = "vscode-chat";
   }
 
+  const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    //console.debug(init?.body)
+    // Parse and modify the body to add stream_options
+    if (init?.body && typeof init.body === "string") {
+      try {
+        const bodyData = JSON.parse(init.body);
+        bodyData.stream_options = { include_usage: true };
+        init = {
+          ...init,
+          body: JSON.stringify(bodyData),
+        };
+      } catch (error) {
+        console.warn("Failed to parse request body:", error);
+      }
+    }
+
+    const response = await fetch(input, init);
+    return response;
+  };
+
   const openai = createOpenAI({
     baseURL: process.env.OPENAI_BASE_URL,
     apiKey: process.env.OPENAI_API_KEY,
     headers,
+    fetch: customFetch,
   });
 
   const modelName = getModelName();
@@ -38,23 +59,26 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: (dataStream) => {
       const result = streamText({
-        model: openai(modelName, { structuredOutputs: false }),
+        model: openai(modelName, {
+          structuredOutputs: false,
+        }),
         messages,
         temperature: parseFloat(process.env.NEXT_PUBLIC_TEMPERATURE || "0.7"),
         system: systemPrompt,
         tools,
-        experimental_telemetry: { isEnabled: true },
         providerOptions: {
           openai: {
             reasoningEffort: "low",
           },
         },
+        experimental_telemetry: { isEnabled: true },
+
         onError: (error) => {
           console.error("OpenAI error:", error);
         },
-        onFinish: ({ usage, reasoningDetails }) => {
+        onFinish: ({ usage, reasoningDetails, providerMetadata }) => {
           const { promptTokens, completionTokens, totalTokens } = usage;
-          console.log("Reasoning details:", reasoningDetails);
+          console.log("Reasoning details:", reasoningDetails, providerMetadata);
 
           // Stream token usage data
           dataStream.writeData({
