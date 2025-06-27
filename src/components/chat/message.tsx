@@ -2,10 +2,11 @@
 
 import { memo } from "react";
 import type { UIMessage } from "ai";
-import { Copy } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AssistantMessage } from "./assistant-message";
 import { getToolRenderer } from "@/tools/registry";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import equal from "fast-deep-equal";
 
 interface MessageProps {
@@ -21,6 +22,7 @@ function PureMessage({
   onCopyToClipboard,
   addToolResult,
 }: MessageProps) {
+  const { isCopied, copyToClipboard } = useCopyToClipboard();
   return (
     <div
       className={`flex w-full ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -61,10 +63,14 @@ function PureMessage({
                       variant="ghost"
                       size="sm"
                       className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-muted rounded-sm"
-                      onClick={() => onCopyToClipboard(part.text)}
+                      onClick={() => copyToClipboard(part.text)}
                       title="Copy message"
                     >
-                      <Copy className="h-2 w-2" />
+                      {isCopied ? (
+                        <Check className="h-2 w-2 text-green-500" />
+                      ) : (
+                        <Copy className="h-2 w-2" />
+                      )}
                     </Button>
                   </div>
                 </div>
